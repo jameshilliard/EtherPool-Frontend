@@ -45,6 +45,35 @@ app.get("/", function(req, res){
 	});
 });
 
+app.get("/hashrateapi", function(req, res){
+	var currentTime = new Date().getTime();
+	client.get("lastpayout", function(err, lastPayout){
+		client.zrevrange("20minshares", 0, -1, function(err, response){
+			console.log(response)
+			var totalHashrate = 0;
+			var queries = 0;
+			for (i = 0; i < response.length; i++) {
+				var address = response[i].split(':')[0];
+				var sharecount = response[i].split(':')[1];
+				if (sharecount != 0) {
+					client.zscore("reportedHashrate", address, function(err, yourSpeed){
+						totalHashrate = totalHashrate + parseInt(yourSpeed);
+						queries++;
+						if (queries === response.length - 1) {
+							res.json(Math.round(totalHashrate/1000000));
+						}
+					});
+				} else {
+					queries++;
+					if (queries === response.length - 1) {
+						res.json(Math.round(totalHashrate/1000000));
+					}
+				}
+			}
+		});
+	});
+});
+
 app.get("/:address", function(req, res){
 	var address = req.params.address;
 	getAddress(address, res);
